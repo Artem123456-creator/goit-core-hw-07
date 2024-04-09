@@ -80,9 +80,9 @@ class AddressBook(UserDict):
         upcoming_birthdays = []
 
         for record in self.data.values():
-            if record.birthday:
-                if record.birthday.value.month == today.month and \
-                        today.day <= record.birthday.value.day <= upcoming_week.day:
+            if record.birthday and isinstance(record.birthday, Birthday):  
+                birthday_date = datetime.strptime(record.birthday.value, "%d.%m.%Y").date()
+                if birthday_date.month == today.month and today.day <= birthday_date.day <= upcoming_week.day:
                     upcoming_birthdays.append(record)
 
         return upcoming_birthdays
