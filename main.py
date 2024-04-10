@@ -26,6 +26,12 @@ class Birthday(Field):
             raise ValueError("Invalid date format. Use DD.MM.YYYY")
         super().__init__(value)
 
+def find_next_weekday(d, weekday: int):  
+    days_ahead = weekday - d.weekday()  
+    if days_ahead <= 0:  
+        days_ahead += 7  
+    return d + timedelta(days=days_ahead)
+
 class Record:
     def __init__(self, name):
         self.name = Name(name)
@@ -75,17 +81,27 @@ class AddressBook(UserDict):
             del self.data[name]
 
     def get_upcoming_birthdays(self):
-        today = datetime.now().date()
-        upcoming_week = today + timedelta(days=7)
-        upcoming_birthdays = []
+        days = 7  
+        today = datetime.today().date()  
+        upcoming_birthdays = []  
+        for record in self.data.values():  
+            if record.birthday and isinstance(record.birthday, Birthday): 
+                birthday_this_year = datetime.strptime(record.birthday.value, "%d.%m.%Y").replace(year=today.year)  
 
-        for record in self.data.values():
-            if record.birthday and isinstance(record.birthday, Birthday):  
-                birthday_date = datetime.strptime(record.birthday.value, "%d.%m.%Y").date()
-                if birthday_date.month == today.month and today.day <= birthday_date.day <= upcoming_week.day:
-                    upcoming_birthdays.append(record)
+                if birthday_this_year.date() < today:  
+                    birthday_this_year = birthday_this_year.replace(year=today.year + 1)  
 
+                if 0 <= (birthday_this_year.date() - today).days <= days:  
+                    if birthday_this_year.weekday() >= 5:  
+                        birthday_this_year = find_next_weekday(birthday_this_year, 0)  
+
+                    congratulation_date_str = birthday_this_year.strftime('%Y.%m.%d')
+                    upcoming_birthdays.append({  
+                        "name": record.name.value,
+                        "congratulation_date": congratulation_date_str  
+                    })
         return upcoming_birthdays
+  
 
 def add_birthday(args, book):
     name, birthday_str = args
@@ -107,7 +123,7 @@ def show_birthday(args, book):
 def birthdays(args, book):
     upcoming_birthdays = book.get_upcoming_birthdays()
     if upcoming_birthdays:
-        return "\n".join([f"{record.name.value}'s birthday: {record.birthday.value}" for record in upcoming_birthdays])
+        return "\n".join([f"{record['name']}'s birthday: {record['congratulation_date']}" for record in upcoming_birthdays])
     else:
         return "No upcoming birthdays"
 
